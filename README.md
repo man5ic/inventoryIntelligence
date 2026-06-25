@@ -257,6 +257,7 @@ Tested on 24,134-material spare parts dataset:
 
 ---
 
-## 🙌 Acknowledgements
+## Acknowledgements:
 
 Built with Flask, pandas, NumPy, Matplotlib, openpyxl, APScheduler, Tailwind CSS, and Font Awesome.
+for exhaustiveTechStack check file w the same name.
