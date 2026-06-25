@@ -1,0 +1,149 @@
+# Complete Tech Stack (Project Notes)
+
+## Programming Language
+
+* Python
+
+---
+
+## Web Framework
+
+* Flask
+
+---
+
+## Frontend
+
+* HTML5
+* CSS3
+* Bootstrap
+* JavaScript
+* Jinja2 Templates
+
+---
+
+## Machine Learning
+
+* scikit-learn
+
+  * LinearRegression
+  * PolynomialFeatures
+  * mean_absolute_error (MAE)
+  * mean_squared_error (RMSE)
+  * r2_score
+
+---
+
+## Forecasting Techniques
+
+* Linear Regression
+* Time Series Forecasting
+* Statistical Analysis
+
+---
+
+## Data Processing
+
+* Pandas
+* NumPy
+
+---
+
+## Data Visualization
+
+* Matplotlib
+* matplotlib.pyplot
+* matplotlib.patches
+
+---
+
+## Excel & Reporting
+
+* OpenPyXL
+* openpyxl.styles
+* openpyxl.utils
+* openpyxl.drawing.image
+* Excel (.xlsx)
+* BytesIO
+
+---
+
+## Scheduling & Automation
+
+* APScheduler
+* BackgroundScheduler
+* CronTrigger
+
+---
+
+## Email Automation
+
+* smtplib
+* email.mime.multipart
+* email.mime.text
+
+---
+
+## Built-in Python Libraries
+
+* os
+* io
+* json
+* base64
+* logging
+* warnings
+* datetime
+* timedelta
+* typing
+
+---
+
+## Inventory Intelligence Techniques
+
+* Demand Forecasting
+* Inventory Intelligence
+* Economic Order Quantity (EOQ)
+* Reorder Point (ROP)
+* Safety Stock
+* ABC Classification
+* Procurement Priority Ranking
+* Material Intelligence
+* Dead Stock Detection
+* Risk Analysis
+* Executive Reporting
+
+---
+
+## Application Modules
+
+* Dashboard Analytics
+* Forecasting Engine
+* Material Intelligence Center
+* Procurement Recommendation Engine
+* Smart Insight Engine
+* Executive Dashboard
+* Report Generation
+* Chart Generation
+* Scheduler
+* Alert Engine
+* Automation Engine
+* Email Alert System
+* Filter Engine
+* Executive Summary
+* Material Reports
+
+---
+
+## Development Tools
+
+* Visual Studio Code
+* Git
+* GitHub
+* Python Virtual Environment (venv)
+
+---
+
+## Data Source
+
+* Microsoft Excel (.xlsx)
+* Industrial Spare Parts Order Dataset
