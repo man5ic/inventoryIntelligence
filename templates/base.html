@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Inventory Intelligence System{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    :root {
+      --primary: #1E3A5F;
+      --accent: #2563EB;
+      --peak: #16A34A;
+      --normal: #2563EB;
+      --low: #DC2626;
+    }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #F1F5F9; }
+    .sidebar { background: var(--primary); min-height: 100vh; }
+    .nav-link { display:flex;align-items:center;gap:12px;padding:10px 16px;color:#CBD5E1;border-radius:8px;transition:all .15s;text-decoration:none;font-size:14px; }
+    .nav-link:hover { background:#1e4080;color:white; }
+    .nav-link.active { background:#2563EB;color:white; }
+    .card { background:white;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid #F1F5F9;padding:20px; }
+    .badge-peak { background: #DCFCE7; color: #166534; }
+    .badge-normal { background: #DBEAFE; color: #1E40AF; }
+    .badge-low { background: #FEE2E2; color: #991B1B; }
+    .badge { padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600; }
+    .badge-critical { background:#FEE2E2;color:#991B1B; }
+    .badge-medium   { background:#FEF3C7;color:#92400E; }
+    .badge-info     { background:#DBEAFE;color:#1E40AF; }
+    .kpi-card { background:white;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px;border-left:4px solid; }
+    table { border-collapse: collapse; width: 100%; }
+    th { background: #1E3A5F; color: white; padding: 10px 12px; text-align: left; font-size: 12px; }
+    td { padding: 8px 12px; border-bottom: 1px solid #F1F5F9; font-size: 12px; }
+    tr:hover td { background: #EFF6FF; }
+    .flash-success { background:#F0FDF4;border:1px solid #BBF7D0;color:#166534;padding:12px 16px;border-radius:8px; }
+    .flash-error   { background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;padding:12px 16px;border-radius:8px; }
+    .flash-warning { background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;padding:12px 16px;border-radius:8px; }
+    .flash-info    { background:#EFF6FF;border:1px solid #BFDBFE;color:#1E40AF;padding:12px 16px;border-radius:8px; }
+    .alert-critical { border-left:4px solid #DC2626;background:#FEF2F2; }
+    .alert-medium   { border-left:4px solid #F59E0B;background:#FFFBEB; }
+    .alert-low      { border-left:4px solid #3B82F6;background:#EFF6FF; }
+    .alert-card { border-radius:8px;padding:14px 16px;margin-bottom:10px; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="flex">
+  <!-- Sidebar -->
+  <div class="sidebar w-64 flex-shrink-0 flex flex-col py-6 px-3 gap-1">
+    <div class="px-4 mb-6">
+      <div class="flex items-center gap-2 mb-1">
+        <i class="fas fa-boxes-stacked text-blue-400 text-xl"></i>
+        <span class="text-white font-bold text-lg">Inventory IQ</span>
+      </div>
+      <span class="text-slate-400 text-xs">Phases 1 · 2 · 3 · 4 · 6 · 7</span>
+    </div>
+
+    <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+      <i class="fas fa-house w-5"></i> Home
+    </a>
+    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+      <i class="fas fa-chart-pie w-5"></i> Dashboard
+    </a>
+    <a href="{{ url_for('forecast_page') }}" class="nav-link {% if request.endpoint == 'forecast_page' %}active{% endif %}">
+      <i class="fas fa-chart-line w-5"></i> Forecast
+    </a>
+    <a href="{{ url_for('alerts_page') }}" class="nav-link {% if request.endpoint == 'alerts_page' %}active{% endif %}">
+      <i class="fas fa-bell w-5"></i> Alerts
+      {% if alert_badge is defined and alert_badge %}
+      <span class="ml-auto badge badge-critical">{{ alert_badge }}</span>
+      {% endif %}
+    </a>
+    <a href="{{ url_for('material_intelligence') }}" class="nav-link {% if request.endpoint == 'material_intelligence' %}active{% endif %}">
+      <i class="fas fa-microscope w-5"></i> Material Intel
+    </a>
+    <a href="{{ url_for('column_mapping') }}" class="nav-link {% if request.endpoint == 'column_mapping' %}active{% endif %}">
+      <i class="fas fa-table-columns w-5"></i> Column Mapping
+    </a>
+
+    <div class="mt-auto px-4 pt-6 border-t border-blue-900">
+      <a href="{{ url_for('download_report') }}"
+         class="flex items-center gap-2 text-sm text-green-400 hover:text-green-300 mb-2">
+        <i class="fas fa-download"></i> Export Report
+      </a>
+      <form method="post" action="{{ url_for('clear_data') }}" onsubmit="return confirm('Clear all data?')">
+        <button class="flex items-center gap-2 text-sm text-red-400 hover:text-red-300">
+          <i class="fas fa-trash"></i> Clear Data
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="flex-1 flex flex-col min-h-screen">
+    <!-- Topbar -->
+    <div class="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+      <h1 class="text-lg font-semibold text-slate-800">{% block page_title %}Dashboard{% endblock %}</h1>
+      <div class="flex items-center gap-3 text-sm text-slate-500">
+        <i class="fas fa-calendar-alt text-blue-400"></i>
+        <span>{{ now if now is defined else '' }}</span>
+        <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium">Phase 7</span>
+      </div>
+    </div>
+
+    <!-- Flash messages -->
+    <div class="px-6 pt-4">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="flash-{{ category }} mb-3 flex items-center gap-2">
+          <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+          {{ message }}
+        </div>
+        {% endfor %}
+      {% endwith %}
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 px-6 py-4">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

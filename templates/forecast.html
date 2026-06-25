@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% block title %}Forecast – Inventory IQ{% endblock %}
+{% block page_title %}Predictive Forecasting & Demand Intelligence{% endblock %}
+
+{% block content %}
+
+<!-- Phase 3 Header Banner -->
+<div class="bg-gradient-to-r from-green-800 to-emerald-700 text-white rounded-xl p-5 mb-6 flex items-center gap-5">
+  <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+    <i class="fas fa-chart-line text-3xl"></i>
+  </div>
+  <div>
+    <h2 class="text-xl font-bold mb-1">Phase 3 – Predictive Forecasting</h2>
+    <p class="text-green-200 text-sm">Linear Regression + Holt's Exponential Smoothing · Auto model selection · 12-month horizon</p>
+  </div>
+  <div class="ml-auto text-right">
+    <a href="{{ url_for('download_report') }}"
+       class="bg-white text-green-800 font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-green-50 transition-all">
+      <i class="fas fa-download"></i> Export Full Report
+    </a>
+  </div>
+</div>
+
+<!-- KPI Row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="kpi-card border-green-500">
+    <p class="text-slate-500 text-xs mb-1">PEAK Materials</p>
+    <p class="text-3xl font-bold text-green-600">{{ forecast_summary.peak_count }}</p>
+    <p class="text-xs text-slate-400">Demand rising ≥ 10%</p>
+  </div>
+  <div class="kpi-card border-blue-400">
+    <p class="text-slate-500 text-xs mb-1">NORMAL Materials</p>
+    <p class="text-3xl font-bold text-blue-600">{{ forecast_summary.normal_count }}</p>
+    <p class="text-xs text-slate-400">Stable demand</p>
+  </div>
+  <div class="kpi-card border-red-400">
+    <p class="text-slate-500 text-xs mb-1">LOW Materials</p>
+    <p class="text-3xl font-bold text-red-600">{{ forecast_summary.low_count }}</p>
+    <p class="text-xs text-slate-400">Demand declining ≥ 10%</p>
+  </div>
+  <div class="kpi-card border-purple-500">
+    <p class="text-slate-500 text-xs mb-1">Avg Demand Δ</p>
+    <p class="text-3xl font-bold {% if forecast_summary.avg_pct_change >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+      {{ '{:+.1f}'.format(forecast_summary.avg_pct_change) }}%
+    </p>
+    <p class="text-xs text-slate-400">Next quarter</p>
+  </div>
+</div>
+
+<!-- Procurement Forecast KPIs -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+  <div class="kpi-card border-amber-500 bg-amber-50">
+    <p class="text-slate-600 text-sm font-medium mb-1">Estimated Procurement – Next Quarter</p>
+    <p class="text-3xl font-bold text-amber-700">₹{{ '{:,.0f}'.format(forecast_summary.total_next_quarter_cost) }}</p>
+  </div>
+  <div class="kpi-card border-indigo-500 bg-indigo-50">
+    <p class="text-slate-600 text-sm font-medium mb-1">Estimated Procurement – Next Year</p>
+    <p class="text-3xl font-bold text-indigo-700">₹{{ '{:,.0f}'.format(forecast_summary.total_next_year_cost) }}</p>
+  </div>
+</div>
+
+<!-- Executive Insights -->
+<div class="card mb-6">
+  <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+    <i class="fas fa-lightbulb text-amber-500"></i> Executive Forecast Insights
+  </h3>
+  <div class="flex flex-col gap-2">
+    {% for insight in exec_insights %}
+    <div class="flex items-start gap-2 bg-green-50 border border-green-100 rounded-lg px-4 py-2.5">
+      <i class="fas fa-circle-chevron-right text-green-500 mt-0.5 text-sm"></i>
+      <span class="text-sm text-slate-700">{{ insight }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+  {% if charts.status_donut %}
+  <div class="card flex flex-col items-center">
+    <h4 class="text-sm font-semibold text-slate-600 mb-3 self-start">Demand Status Distribution</h4>
+    <img src="data:image/png;base64,{{ charts.status_donut }}" class="max-h-72" alt="Status Donut"/>
+  </div>
+  {% endif %}
+  {% if charts.model_comparison %}
+  <div class="card">
+    <h4 class="text-sm font-semibold text-slate-600 mb-3">Model Accuracy Comparison (RMSE)</h4>
+    <img src="data:image/png;base64,{{ charts.model_comparison }}" class="w-full" alt="Model Comparison"/>
+  </div>
+  {% endif %}
+</div>
+
+{% if charts.demand_overview %}
+<div class="card mb-6">
+  <h4 class="text-sm font-semibold text-slate-600 mb-3">Next Quarter Demand by Material</h4>
+  <img src="data:image/png;base64,{{ charts.demand_overview }}" class="w-full" alt="Demand Overview"/>
+</div>
+{% endif %}
+
+{% if charts.procurement_trend %}
+<div class="card mb-6">
+  <h4 class="text-sm font-semibold text-slate-600 mb-3">Monthly Procurement Cost Forecast (Top Materials)</h4>
+  <img src="data:image/png;base64,{{ charts.procurement_trend }}" class="w-full" alt="Procurement Trend"/>
+</div>
+{% endif %}
+
+<!-- Individual Forecast Charts -->
+{% if charts.individual %}
+<div class="mb-6">
+  <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+    <i class="fas fa-chart-area text-blue-500"></i> Top 5 Materials – Individual Forecasts
+  </h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% for item in charts.individual %}
+    <div class="card">
+      <h4 class="text-sm font-semibold text-slate-600 mb-2">{{ item.material_code }} – {{ item.description[:40] }}</h4>
+      <img src="data:image/png;base64,{{ item.image }}" class="w-full" alt="{{ item.material_code }}"/>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Full Forecast Table -->
+<div class="card">
+  <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+    <i class="fas fa-table text-green-500"></i> Full Forecast Data
+  </h3>
+  <div class="overflow-x-auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Description</th>
+          <th>Model</th>
+          <th>RMSE</th>
+          <th>R²</th>
+          <th>Next Month Qty</th>
+          <th>Next Qtr Qty</th>
+          <th>Next Year Qty</th>
+          <th>Next Month Cost</th>
+          <th>Next Qtr Cost</th>
+          <th>Δ%</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in forecasts %}
+        <tr>
+          <td class="font-mono text-blue-700 font-medium">{{ f.material_code }}</td>
+          <td class="max-w-xs">{{ f.description[:40] if f.description else '' }}</td>
+          <td class="text-xs capitalize">{{ f.best_model|replace('_',' ')|title }}</td>
+          <td class="text-right text-xs">{{ '{:.2f}'.format(f.model_metrics.rmse|float) }}</td>
+          <td class="text-right text-xs">{{ '{:.3f}'.format(f.model_metrics.r2|float) }}</td>
+          <td class="text-right">{{ '{:,.1f}'.format(f.next_month_qty|float) }}</td>
+          <td class="text-right font-semibold">{{ '{:,.1f}'.format(f.next_quarter_qty|float) }}</td>
+          <td class="text-right">{{ '{:,.1f}'.format(f.next_year_qty|float) }}</td>
+          <td class="text-right">₹{{ '{:,.0f}'.format(f.next_month_cost|float) }}</td>
+          <td class="text-right font-semibold">₹{{ '{:,.0f}'.format(f.next_quarter_cost|float) }}</td>
+          <td class="text-right font-semibold {% if f.pct_change|float > 0 %}text-green-600{% elif f.pct_change|float < 0 %}text-red-600{% endif %}">
+            {{ '{:+.1f}'.format(f.pct_change|float) }}%
+          </td>
+          <td>
+            <span class="badge
+              {% if f.forecast_status == 'PEAK' %}badge-peak
+              {% elif f.forecast_status == 'LOW' %}badge-low
+              {% else %}badge-normal{% endif %}">
+              {{ f.forecast_status }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

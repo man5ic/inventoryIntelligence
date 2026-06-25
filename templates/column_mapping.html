@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Column Mapping{% endblock %}
+{% block page_title %}Column Mapping{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="card">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+        <i class="fas fa-table-columns text-blue-600"></i>
+      </div>
+      <div>
+        <h2 class="font-semibold text-slate-800">Map Your Columns</h2>
+        <p class="text-slate-500 text-sm">Match your dataset columns to required fields</p>
+      </div>
+    </div>
+
+    <form action="{{ url_for('column_mapping') }}" method="post">
+      <div class="flex flex-col gap-4">
+        {% set labels = {
+          'material_code': ('Material Code', 'fas fa-barcode', 'Unique identifier for each material', false),
+          'description': ('Description', 'fas fa-tag', 'Material name / description', false),
+          'quantity': ('Annual Quantity', 'fas fa-cubes', 'Annual consumption / stock quantity', false),
+          'unit_price': ('Unit Price (₹)', 'fas fa-indian-rupee-sign', 'Price per unit', false),
+          'lead_time': ('Lead Time (Days)', 'fas fa-clock', 'Procurement lead time in days', true),
+          'category': ('Category', 'fas fa-folder', 'Material category', true),
+          'plant': ('Plant / Site', 'fas fa-industry', 'Plant, site or location identifier — enables Plant filter', true),
+          'region': ('Region / Zone', 'fas fa-map-location-dot', 'Region, zone or territory — enables Region filter', true),
+          'date': ('Transaction Date', 'fas fa-calendar-alt', 'Date column for time-based filtering (YYYY-MM-DD)', true),
+        } %}
+
+        <!-- Required fields -->
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1 mb-1">Required Fields</p>
+        {% for field in required_fields %}
+        {% set label, icon, hint, opt = labels[field] %}
+        <div class="bg-slate-50 rounded-xl p-4">
+          <label class="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+            <i class="{{ icon }} text-blue-500 w-4"></i> {{ label }}
+          </label>
+          <p class="text-xs text-slate-400 mb-2">{{ hint }}</p>
+          <select name="{{ field }}"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="">— Not mapped —</option>
+            {% for col in columns %}
+            <option value="{{ col }}" {% if current_map.get(field) == col %}selected{% endif %}>{{ col }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endfor %}
+
+        <!-- Optional fields (Phase 7) -->
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-3 mb-1">
+          Optional Fields <span class="font-normal normal-case">(enables Plant / Region / Time filters)</span>
+        </p>
+        {% for field in optional_fields %}
+        {% if field in labels %}
+        {% set label, icon, hint, opt = labels[field] %}
+        <div class="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+          <label class="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
+            <i class="{{ icon }} text-indigo-500 w-4"></i> {{ label }}
+            <span class="text-indigo-400 text-xs ml-1">(optional — Phase 7)</span>
+          </label>
+          <p class="text-xs text-slate-400 mb-2">{{ hint }}</p>
+          <select name="{{ field }}"
+                  class="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white">
+            <option value="">— Not mapped —</option>
+            {% for col in columns %}
+            <option value="{{ col }}" {% if current_map.get(field) == col %}selected{% endif %}>{{ col }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <div class="flex gap-3 pt-2">
+          <button type="submit"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-all flex items-center gap-2">
+            <i class="fas fa-check"></i> Save Mapping & Go to Dashboard
+          </button>
+          <a href="{{ url_for('index') }}"
+             class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-all">
+            Cancel
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+{% block title %}Material Intelligence — Inventory IQ{% endblock %}
+{% block page_title %}Material Intelligence Center{% endblock %}
+
+{% block head %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  .mi-dropdown-wrap { position: relative; }
+  .mi-select-styled {
+    appearance: none;
+    background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+    border: 1.5px solid #CBD5E1;
+    border-radius: 10px;
+    padding: 10px 40px 10px 14px;
+    font-size: 14px;
+    color: #1E293B;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  .mi-select-styled:focus { outline: none; border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  .stat-card { background: white; border-radius: 12px; padding: 18px 20px; border: 1px solid #E2E8F0; transition: box-shadow .15s; }
+  .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.07); }
+  .stat-label { font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .stat-value { font-size: 20px; font-weight: 700; color: #1E293B; line-height: 1.2; }
+  .stat-sub { font-size: 11px; color: #94A3B8; margin-top: 3px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #1E3A5F; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .health-ring-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .health-score-num { font-size: 38px; font-weight: 800; line-height: 1; }
+  .health-breakdown-bar { height: 6px; border-radius: 9999px; background: #E2E8F0; overflow: hidden; margin-top: 4px; }
+  .health-breakdown-fill { height: 100%; border-radius: 9999px; transition: width .5s ease; }
+  .order-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px 16px; text-align: center; }
+  .order-qty { font-size: 26px; font-weight: 800; color: #1E3A5F; }
+  .order-label { font-size: 11px; color: #64748B; font-weight: 600; margin-top: 2px; }
+  .badge-abc-A { background: #FEF3C7; color: #92400E; }
+  .badge-abc-B { background: #DBEAFE; color: #1E40AF; }
+  .badge-abc-C { background: #F0FDF4; color: #166534; }
+  .badge-abc { padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 700; }
+  .badge-status-PEAK   { background: #F0FDF4; color: #166534; }
+  .badge-status-NORMAL { background: #DBEAFE; color: #1E40AF; }
+  .badge-status-LOW    { background: #FEF2F2; color: #991B1B; }
+  .badge-status { padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+  .proc-estimate { background: linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%); border-radius: 12px; padding: 18px 20px; color: white; }
+  .empty-state { text-align: center; padding: 60px 20px; color: #94A3B8; }
+  .insight-pill { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #1E40AF; display: flex; align-items: flex-start; gap: 8px; }
+  .search-input { border: 1.5px solid #CBD5E1; border-radius: 10px; padding: 9px 14px; font-size: 14px; width: 100%; transition: border-color .2s; }
+  .search-input:focus { outline: none; border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  .material-option { padding: 8px 12px; cursor: pointer; font-size: 13px; border-radius: 6px; transition: background .1s; display: flex; gap: 10px; align-items: center; }
+  .material-option:hover, .material-option.selected { background: #EFF6FF; color: #1E40AF; }
+  .material-option .code { font-weight: 700; color: #1E3A5F; min-width: 90px; }
+  .material-option.selected .code { color: #2563EB; }
+  #dropdown-list { max-height: 320px; overflow-y: auto; border: 1.5px solid #E2E8F0; border-radius: 10px; background: white; margin-top: 6px; display: none; box-shadow: 0 8px 24px rgba(0,0,0,.1); }
+  #dropdown-list.open { display: block; }
+  .loader { border: 3px solid #E2E8F0; border-top-color: #2563EB; border-radius: 50%; width: 28px; height: 28px; animation: spin 0.7s linear infinite; margin: 40px auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #mi-content { transition: opacity .2s; }
+  #mi-content.loading { opacity: 0.4; pointer-events: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+
+  <!-- ── Header row ── -->
+  <div class="flex items-center justify-between">
+    <div>
+      <p class="text-sm text-slate-500 mt-0.5">Select any material to view complete intelligence analysis</p>
+    </div>
+    <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">{{ materials|length }} Materials Available</span>
+  </div>
+
+  <!-- ── Material Selector ── -->
+  <div class="card">
+    <div class="section-title"><i class="fas fa-search text-blue-500"></i> Select Material</div>
+    <div class="flex gap-3 items-start flex-wrap">
+      <div class="flex-1 min-w-64 relative" id="mat-selector-wrap">
+        <input type="text" id="mat-search" class="search-input" placeholder="Search by code or name…" autocomplete="off">
+        <div id="dropdown-list">
+          {% for m in materials %}
+          <div class="material-option {% if m.code == selected_code %}selected{% endif %}"
+               data-code="{{ m.code }}" data-desc="{{ m.description }}">
+            <span class="code">{{ m.code }}</span>
+            <span class="text-slate-600 truncate">{{ m.description }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div id="selected-pill" class="{% if not selected_code %}hidden{% endif %} flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm">
+        <i class="fas fa-box text-blue-500"></i>
+        <span id="selected-label" class="text-blue-800 font-semibold">{{ selected_code }}</span>
+        <button onclick="clearSelection()" class="text-blue-400 hover:text-blue-700 ml-1"><i class="fas fa-times"></i></button>
+      </div>
+
+      <!-- Phase 8: Generate Material Report button -->
+      <a id="material-report-btn"
+         href="{% if selected_code %}{{ url_for('download_material_report', material_code=selected_code) }}{% else %}#{% endif %}"
+         class="{% if not selected_code %}hidden{% endif %} flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm"
+         title="Download complete material analysis as Excel report">
+        <i class="fas fa-file-excel"></i> Generate Material Report
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Intelligence Panel ── -->
+  <div id="mi-content">
+    {% if material_data %}
+      {% include 'material_intelligence_panel.html' %}
+    {% else %}
+    <div class="card empty-state" id="empty-state">
+      <i class="fas fa-microscope text-5xl mb-4 text-slate-300"></i>
+      <p class="text-lg font-semibold text-slate-400">Select a material above</p>
+      <p class="text-sm mt-1">Complete intelligence analysis will appear here</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+const allMaterials = {{ materials | tojson }};
+let selectedCode = "{{ selected_code }}";
+let searchTimeout;
+
+const searchInput = document.getElementById('mat-search');
+const dropdownList = document.getElementById('dropdown-list');
+const selectedPill = document.getElementById('selected-pill');
+const selectedLabel = document.getElementById('selected-label');
+const miContent = document.getElementById('mi-content');
+
+// Pre-fill search if already selected
+if (selectedCode) {
+  const mat = allMaterials.find(m => m.code === selectedCode);
+  if (mat) searchInput.value = mat.label;
+}
+
+searchInput.addEventListener('focus', () => {
+  filterDropdown(searchInput.value);
+  dropdownList.classList.add('open');
+});
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    filterDropdown(searchInput.value);
+    dropdownList.classList.add('open');
+  }, 120);
+});
+
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('mat-selector-wrap').contains(e.target)) {
+    dropdownList.classList.remove('open');
+  }
+});
+
+function filterDropdown(query) {
+  const q = query.toLowerCase().trim();
+  const options = dropdownList.querySelectorAll('.material-option');
+  let anyVisible = false;
+  options.forEach(opt => {
+    const code = opt.dataset.code.toLowerCase();
+    const desc = opt.dataset.desc.toLowerCase();
+    const match = !q || code.includes(q) || desc.includes(q);
+    opt.style.display = match ? '' : 'none';
+    if (match) anyVisible = true;
+  });
+}
+
+dropdownList.addEventListener('click', (e) => {
+  const opt = e.target.closest('.material-option');
+  if (!opt) return;
+  selectMaterial(opt.dataset.code, opt.dataset.code + ' – ' + opt.dataset.desc);
+});
+
+function selectMaterial(code, label) {
+  selectedCode = code;
+  searchInput.value = label;
+  dropdownList.classList.remove('open');
+
+  // Highlight selected
+  dropdownList.querySelectorAll('.material-option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.code === code);
+  });
+
+  selectedPill.classList.remove('hidden');
+  selectedLabel.textContent = code;
+
+  // Phase 8: Show & update report button
+  const reportBtn = document.getElementById('material-report-btn');
+  if (reportBtn) {
+    reportBtn.href = `/download/material-report/${encodeURIComponent(code)}`;
+    reportBtn.classList.remove('hidden');
+  }
+
+  loadMaterialData(code);
+}
+
+function clearSelection() {
+  selectedCode = '';
+  searchInput.value = '';
+  selectedPill.classList.add('hidden');
+  // Phase 8: Hide report button on clear
+  const reportBtn = document.getElementById('material-report-btn');
+  if (reportBtn) reportBtn.classList.add('hidden');
+
+  miContent.innerHTML = `<div class="card empty-state" id="empty-state">
+    <i class="fas fa-microscope text-5xl mb-4 text-slate-300"></i>
+    <p class="text-lg font-semibold text-slate-400">Select a material above</p>
+    <p class="text-sm mt-1">Complete intelligence analysis will appear here</p>
+  </div>`;
+  dropdownList.querySelectorAll('.material-option').forEach(o => o.classList.remove('selected'));
+  filterDropdown('');
+}
+
+function loadMaterialData(code) {
+  miContent.classList.add('loading');
+  miContent.innerHTML = '<div class="loader"></div>';
+
+  fetch(`/api/material-intelligence/${encodeURIComponent(code)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        miContent.innerHTML = `<div class="card empty-state"><p class="text-red-500">${data.error}</p></div>`;
+        return;
+      }
+      renderMaterialPanel(data);
+    })
+    .catch(() => {
+      miContent.innerHTML = `<div class="card empty-state"><p class="text-red-500">Failed to load data. Please try again.</p></div>`;
+    })
+    .finally(() => miContent.classList.remove('loading'));
+}
+
+function renderMaterialPanel(d) {
+  const h = d.health;
+  const o = d.orders;
+  const p = d.procurement;
+
+  // ABC badge color
+  const abcColors = { A: 'badge-abc-A', B: 'badge-abc-B', C: 'badge-abc-C' };
+  const abcBadge = `<span class="badge-abc ${abcColors[d.abc_class] || 'badge-abc-C'}">${d.abc_class} Class</span>`;
+
+  // Status badge
+  const statusColors = { PEAK: 'badge-status-PEAK', NORMAL: 'badge-status-NORMAL', LOW: 'badge-status-LOW' };
+  const statusBadge = `<span class="badge-status ${statusColors[d.forecast_status] || 'badge-status-NORMAL'}">${d.forecast_status}</span>`;
+
+  // Health bar color
+  const hColor = h.score >= 90 ? '#16A34A' : h.score >= 70 ? '#D97706' : '#DC2626';
+
+  // Breakdown bars
+  const breakdownHtml = Object.entries(h.breakdown).map(([key, val]) => {
+    const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const maxes = { demand_stability: 30, forecast_trend: 25, procurement_risk: 25, inventory_safety: 20 };
+    const pct = Math.round(val / (maxes[key] || 30) * 100);
+    return `<div class="mb-2">
+      <div class="flex justify-between text-xs text-slate-500 mb-1"><span>${label}</span><span>${val}/${maxes[key] || 30}</span></div>
+      <div class="health-breakdown-bar"><div class="health-breakdown-fill" style="width:${pct}%;background:${hColor}"></div></div>
+    </div>`;
+  }).join('');
+
+  // Urgency badge
+  const urgencyHtml = `<span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style="background:${o.urgency_color}20;color:${o.urgency_color}">${o.urgency}</span>`;
+
+  // Monthly forecast mini table (first 6 months)
+  const monthlyRows = (d.monthly_forecast || []).slice(0, 6).map(m =>
+    `<tr><td class="text-xs">${m.month}</td><td class="text-xs text-right font-semibold">${Number(m.forecast_qty).toLocaleString('en-IN')}</td><td class="text-xs text-right text-slate-500">₹${Number(m.forecast_cost).toLocaleString('en-IN', {maximumFractionDigits:0})}</td></tr>`
+  ).join('');
+
+  miContent.innerHTML = `
+  <div class="space-y-4">
+
+    <!-- Overview Cards -->
+    <div class="card">
+      <div class="flex items-start justify-between flex-wrap gap-3 mb-4">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="text-lg font-bold text-slate-800">${d.material_code}</h2>
+            ${abcBadge}
+            ${statusBadge}
+          </div>
+          <p class="text-sm text-slate-500 mt-0.5">${d.description}</p>
+          <p class="text-xs text-slate-400 mt-1">${d.category || ''} &nbsp;·&nbsp; Unit Price: ₹${Number(d.unit_price).toLocaleString('en-IN', {maximumFractionDigits:2})} &nbsp;·&nbsp; Lead Time: ${d.lead_time} days</p>
+        </div>
+        <div class="text-right">
+          <div class="text-xs text-slate-400">Annual Value</div>
+          <div class="text-xl font-bold text-slate-800">₹${Number(d.annual_value).toLocaleString('en-IN', {maximumFractionDigits:0})}</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="stat-card">
+          <div class="stat-label"><i class="fas fa-chart-bar text-blue-400 mr-1"></i>Total Demand</div>
+          <div class="stat-value">${Number(d.total_demand).toLocaleString('en-IN')}</div>
+          <div class="stat-sub">Annual units</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fas fa-chart-line text-green-400 mr-1"></i>Forecast Demand</div>
+          <div class="stat-value">${Number(d.forecast_demand).toLocaleString('en-IN', {maximumFractionDigits:0})}</div>
+          <div class="stat-sub">Next 12 months &nbsp;<b style="color:${d.pct_change >= 0 ? '#16A34A':'#DC2626'}">${d.pct_change >= 0 ? '+' : ''}${d.pct_change}%</b></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fas fa-shield-halved text-purple-400 mr-1"></i>Safety Stock</div>
+          <div class="stat-value">${Number(d.safety_stock).toLocaleString('en-IN', {maximumFractionDigits:0})}</div>
+          <div class="stat-sub">Units buffer</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fas fa-rotate-left text-orange-400 mr-1"></i>Reorder Point</div>
+          <div class="stat-value">${Number(d.reorder_point).toLocaleString('en-IN', {maximumFractionDigits:0})}</div>
+          <div class="stat-sub">Trigger units</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fas fa-boxes text-teal-400 mr-1"></i>EOQ</div>
+          <div class="stat-value">${Number(d.eoq).toLocaleString('en-IN', {maximumFractionDigits:0})}</div>
+          <div class="stat-sub">Optimal order qty</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fas fa-tag text-blue-400 mr-1"></i>ABC Class</div>
+          <div class="stat-value">${d.abc_class}</div>
+          <div class="stat-sub">${d.inventory_status}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fas fa-wave-square text-indigo-400 mr-1"></i>Demand Pattern</div>
+          <div class="stat-value text-base">${d.demand_stability}</div>
+          <div class="stat-sub">Volatility category</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><i class="fas fa-calendar-check text-green-400 mr-1"></i>Avg Monthly</div>
+          <div class="stat-value">${Number(d.avg_monthly_demand).toLocaleString('en-IN', {maximumFractionDigits:0})}</div>
+          <div class="stat-sub">Units/month</div>
+        </div>
+      </div>
+      <div class="mt-3 insight-pill">
+        <i class="fas fa-lightbulb text-blue-400 mt-0.5 flex-shrink-0"></i>
+        <span>${d.insight}</span>
+      </div>
+    </div>
+
+    <!-- Middle Row: Health + Orders + Procurement -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+      <!-- Health Score -->
+      <div class="card">
+        <div class="section-title"><i class="fas fa-heart-pulse text-red-400"></i> Material Health</div>
+        <div class="health-ring-wrap mb-4">
+          <div class="health-score-num" style="color:${hColor}">${h.score}</div>
+          <div class="text-sm font-bold mt-1" style="color:${hColor}"><i class="fas ${h.icon}"></i> ${h.label}</div>
+          <div class="text-xs text-slate-400 mt-0.5">out of 100</div>
+        </div>
+        <div class="space-y-1">
+          ${breakdownHtml}
+        </div>
+      </div>
+
+      <!-- Order Recommendations -->
+      <div class="card">
+        <div class="section-title"><i class="fas fa-cart-shopping text-green-500"></i> Order Recommendations</div>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="order-box">
+            <div class="order-qty">${Number(o.weekly_qty).toLocaleString('en-IN')}</div>
+            <div class="order-label">Weekly Qty</div>
+          </div>
+          <div class="order-box">
+            <div class="order-qty">${Number(o.monthly_qty).toLocaleString('en-IN')}</div>
+            <div class="order-label">Monthly Qty</div>
+          </div>
+        </div>
+        <div class="text-xs text-slate-500 space-y-2">
+          <div class="flex justify-between">
+            <span>EOQ (optimal batch)</span>
+            <span class="font-semibold text-slate-700">${Number(o.eoq_qty).toLocaleString('en-IN')} units</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Reorder every</span>
+            <span class="font-semibold text-slate-700">${o.eoq_order_interval_days} days</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Trend adjustment</span>
+            <span class="font-semibold" style="color:${o.trend_adjustment >= 0 ? '#16A34A':'#DC2626'}">${o.trend_adjustment >= 0 ? '+' : ''}${o.trend_adjustment}%</span>
+          </div>
+          <div class="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center">
+            <span>Stock status</span>
+            ${urgencyHtml}
+          </div>
+          <div class="text-xs text-slate-400 mt-1">${o.basis}</div>
+        </div>
+      </div>
+
+      <!-- Procurement Estimator -->
+      <div class="card flex flex-col gap-3">
+        <div class="section-title"><i class="fas fa-indian-rupee-sign text-blue-500"></i> Procurement Estimator</div>
+        <div class="proc-estimate">
+          <div class="text-xs text-blue-200 font-semibold mb-1">NEXT QUARTER</div>
+          <div class="text-2xl font-bold">₹${p.next_quarter_lakhs} Lakhs</div>
+          <div class="text-xs text-blue-200 mt-0.5">≈ ₹${Number(p.next_quarter_cost).toLocaleString('en-IN', {maximumFractionDigits:0})}</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div class="stat-card p-3">
+            <div class="stat-label text-xs">Next Month</div>
+            <div class="font-bold text-slate-700">₹${p.next_month_lakhs}L</div>
+          </div>
+          <div class="stat-card p-3">
+            <div class="stat-label text-xs">Next Year</div>
+            <div class="font-bold text-slate-700">₹${p.next_year_lakhs}L</div>
+          </div>
+        </div>
+        <div class="text-xs text-slate-400">Based on forecast demand at ₹${Number(d.unit_price).toLocaleString('en-IN', {maximumFractionDigits:2})}/unit</div>
+
+        <!-- Monthly forecast mini table -->
+        <div class="mt-1">
+          <div class="text-xs font-semibold text-slate-500 mb-2">6-Month Forecast Breakdown</div>
+          <table class="w-full">
+            <thead><tr><th class="text-left text-xs font-semibold text-slate-400 pb-1">Month</th><th class="text-right text-xs font-semibold text-slate-400 pb-1">Qty</th><th class="text-right text-xs font-semibold text-slate-400 pb-1">Cost</th></tr></thead>
+            <tbody>${monthlyRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Demand Timeline Chart -->
+    <div class="card">
+      <div class="section-title"><i class="fas fa-chart-area text-blue-500"></i> Demand & Forecast Timeline</div>
+      <div id="timeline-chart" style="width:100%;height:340px;"></div>
+    </div>
+
+  </div>`;
+
+  // Render Plotly chart
+  const cd = d.chart_data;
+  if (cd && window.Plotly) {
+    Plotly.newPlot('timeline-chart', cd.data, cd.layout, cd.config);
+  }
+}
+
+// On page load: if a material was pre-selected via server render, re-render via JS for consistent UX
+{% if selected_code and material_data %}
+// Already rendered server-side — attach Plotly to existing chart
+(function() {
+  const cd = {{ material_data.chart_data | tojson }};
+  if (cd && window.Plotly) {
+    Plotly.newPlot('timeline-chart', cd.data, cd.layout, cd.config);
+  }
+})();
+{% endif %}
+</script>
+{% endblock %}

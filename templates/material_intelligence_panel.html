@@ -1,0 +1,184 @@
+{# Rendered server-side when ?material= param is present; Plotly chart attached via JS in parent #}
+{% set h = material_data.health %}
+{% set o = material_data.orders %}
+{% set p = material_data.procurement %}
+{% set d = material_data %}
+
+<div class="space-y-4">
+
+  <!-- Overview -->
+  <div class="card">
+    <div class="flex items-start justify-between flex-wrap gap-3 mb-4">
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <h2 class="text-lg font-bold text-slate-800">{{ d.material_code }}</h2>
+          <span class="badge-abc badge-abc-{{ d.abc_class }}">{{ d.abc_class }} Class</span>
+          <span class="badge-status badge-status-{{ d.forecast_status }}">{{ d.forecast_status }}</span>
+        </div>
+        <p class="text-sm text-slate-500 mt-0.5">{{ d.description }}</p>
+        <p class="text-xs text-slate-400 mt-1">{{ d.category }} &nbsp;·&nbsp; Unit Price: ₹{{ "%.2f"|format(d.unit_price) }} &nbsp;·&nbsp; Lead Time: {{ d.lead_time|int }} days</p>
+      </div>
+      <div class="text-right">
+        <div class="text-xs text-slate-400">Annual Value</div>
+        <div class="text-xl font-bold text-slate-800">₹{{ "{:,.0f}".format(d.annual_value) }}</div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="stat-card">
+        <div class="stat-label"><i class="fas fa-chart-bar text-blue-400 mr-1"></i>Total Demand</div>
+        <div class="stat-value">{{ "{:,.0f}".format(d.total_demand) }}</div>
+        <div class="stat-sub">Annual units</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fas fa-chart-line text-green-400 mr-1"></i>Forecast Demand</div>
+        <div class="stat-value">{{ "{:,.0f}".format(d.forecast_demand) }}</div>
+        <div class="stat-sub">Next 12 months &nbsp;<b style="color:{{ '#16A34A' if d.pct_change >= 0 else '#DC2626' }}">{{ '+' if d.pct_change >= 0 else '' }}{{ d.pct_change }}%</b></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fas fa-shield-halved text-purple-400 mr-1"></i>Safety Stock</div>
+        <div class="stat-value">{{ "{:,.0f}".format(d.safety_stock) }}</div>
+        <div class="stat-sub">Units buffer</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fas fa-rotate-left text-orange-400 mr-1"></i>Reorder Point</div>
+        <div class="stat-value">{{ "{:,.0f}".format(d.reorder_point) }}</div>
+        <div class="stat-sub">Trigger units</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fas fa-boxes text-teal-400 mr-1"></i>EOQ</div>
+        <div class="stat-value">{{ "{:,.0f}".format(d.eoq) }}</div>
+        <div class="stat-sub">Optimal order qty</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fas fa-tag text-blue-400 mr-1"></i>ABC Class</div>
+        <div class="stat-value">{{ d.abc_class }}</div>
+        <div class="stat-sub">{{ d.inventory_status }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fas fa-wave-square text-indigo-400 mr-1"></i>Demand Pattern</div>
+        <div class="stat-value text-base">{{ d.demand_stability }}</div>
+        <div class="stat-sub">Volatility category</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="fas fa-calendar-check text-green-400 mr-1"></i>Avg Monthly</div>
+        <div class="stat-value">{{ "{:,.0f}".format(d.avg_monthly_demand) }}</div>
+        <div class="stat-sub">Units/month</div>
+      </div>
+    </div>
+    <div class="mt-3 insight-pill">
+      <i class="fas fa-lightbulb text-blue-400 mt-0.5 flex-shrink-0"></i>
+      <span>{{ d.insight }}</span>
+    </div>
+  </div>
+
+  <!-- Middle Row -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    <!-- Health Score -->
+    <div class="card">
+      <div class="section-title"><i class="fas fa-heart-pulse text-red-400"></i> Material Health</div>
+      <div class="health-ring-wrap mb-4">
+        <div class="health-score-num" style="color:{{ h.color }}">{{ h.score }}</div>
+        <div class="text-sm font-bold mt-1" style="color:{{ h.color }}"><i class="fas {{ h.icon }}"></i> {{ h.label }}</div>
+        <div class="text-xs text-slate-400 mt-0.5">out of 100</div>
+      </div>
+      {% set maxes = {'demand_stability': 30, 'forecast_trend': 25, 'procurement_risk': 25, 'inventory_safety': 20} %}
+      {% for key, val in h.breakdown.items() %}
+      {% set max_val = maxes.get(key, 30) %}
+      {% set pct = (val / max_val * 100)|int %}
+      <div class="mb-2">
+        <div class="flex justify-between text-xs text-slate-500 mb-1">
+          <span>{{ key.replace('_', ' ')|title }}</span>
+          <span>{{ val }}/{{ max_val }}</span>
+        </div>
+        <div class="health-breakdown-bar">
+          <div class="health-breakdown-fill" style="width:{{ pct }}%;background:{{ h.color }}"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Order Recommendations -->
+    <div class="card">
+      <div class="section-title"><i class="fas fa-cart-shopping text-green-500"></i> Order Recommendations</div>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="order-box">
+          <div class="order-qty">{{ "{:,}".format(o.weekly_qty) }}</div>
+          <div class="order-label">Weekly Qty</div>
+        </div>
+        <div class="order-box">
+          <div class="order-qty">{{ "{:,}".format(o.monthly_qty) }}</div>
+          <div class="order-label">Monthly Qty</div>
+        </div>
+      </div>
+      <div class="text-xs text-slate-500 space-y-2">
+        <div class="flex justify-between">
+          <span>EOQ (optimal batch)</span>
+          <span class="font-semibold text-slate-700">{{ "{:,}".format(o.eoq_qty) }} units</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Reorder every</span>
+          <span class="font-semibold text-slate-700">{{ o.eoq_order_interval_days }} days</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Trend adjustment</span>
+          <span class="font-semibold" style="color:{{ '#16A34A' if o.trend_adjustment >= 0 else '#DC2626' }}">{{ '+' if o.trend_adjustment >= 0 else '' }}{{ o.trend_adjustment }}%</span>
+        </div>
+        <div class="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center">
+          <span>Stock status</span>
+          <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style="background:{{ o.urgency_color }}20;color:{{ o.urgency_color }}">{{ o.urgency }}</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-1">{{ o.basis }}</div>
+      </div>
+    </div>
+
+    <!-- Procurement Estimator -->
+    <div class="card flex flex-col gap-3">
+      <div class="section-title"><i class="fas fa-indian-rupee-sign text-blue-500"></i> Procurement Estimator</div>
+      <div class="proc-estimate">
+        <div class="text-xs text-blue-200 font-semibold mb-1">NEXT QUARTER</div>
+        <div class="text-2xl font-bold">₹{{ p.next_quarter_lakhs }} Lakhs</div>
+        <div class="text-xs text-blue-200 mt-0.5">≈ ₹{{ "{:,.0f}".format(p.next_quarter_cost) }}</div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <div class="stat-card p-3">
+          <div class="stat-label text-xs">Next Month</div>
+          <div class="font-bold text-slate-700">₹{{ p.next_month_lakhs }}L</div>
+        </div>
+        <div class="stat-card p-3">
+          <div class="stat-label text-xs">Next Year</div>
+          <div class="font-bold text-slate-700">₹{{ p.next_year_lakhs }}L</div>
+        </div>
+      </div>
+      <div class="text-xs text-slate-400">Based on forecast demand at ₹{{ "%.2f"|format(d.unit_price) }}/unit</div>
+      <div class="mt-1">
+        <div class="text-xs font-semibold text-slate-500 mb-2">6-Month Forecast Breakdown</div>
+        <table class="w-full">
+          <thead>
+            <tr>
+              <th class="text-left text-xs font-semibold text-slate-400 pb-1">Month</th>
+              <th class="text-right text-xs font-semibold text-slate-400 pb-1">Qty</th>
+              <th class="text-right text-xs font-semibold text-slate-400 pb-1">Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in d.monthly_forecast[:6] %}
+            <tr>
+              <td class="text-xs">{{ m.month }}</td>
+              <td class="text-xs text-right font-semibold">{{ "{:,.0f}".format(m.forecast_qty) }}</td>
+              <td class="text-xs text-right text-slate-500">₹{{ "{:,.0f}".format(m.forecast_cost) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline Chart -->
+  <div class="card">
+    <div class="section-title"><i class="fas fa-chart-area text-blue-500"></i> Demand &amp; Forecast Timeline</div>
+    <div id="timeline-chart" style="width:100%;height:340px;"></div>
+  </div>
+
+</div>

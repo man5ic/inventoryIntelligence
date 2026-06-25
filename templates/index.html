@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Home – Inventory IQ{% endblock %}
+{% block page_title %}Home{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <!-- Hero -->
+  <div class="card mb-6 bg-gradient-to-br from-slate-800 to-blue-900 text-white">
+    <div class="flex items-center gap-4 mb-4">
+      <div class="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center">
+        <i class="fas fa-boxes-stacked text-2xl"></i>
+      </div>
+      <div>
+        <h2 class="text-2xl font-bold">Inventory Intelligence System</h2>
+        <p class="text-blue-200 text-sm">Phase 1 · Architecture &nbsp;|&nbsp; Phase 2 · Intelligence &nbsp;|&nbsp; Phase 3 · Predictive Forecasting</p>
+      </div>
+    </div>
+    <p class="text-slate-300 text-sm leading-relaxed">
+      Upload your inventory dataset, map columns, and get AI-powered insights — EOQ, Safety Stock, ABC classification, and predictive demand forecasting for the next 12 months.
+    </p>
+  </div>
+
+  <!-- Status -->
+  <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="card text-center">
+      <i class="fas fa-database text-3xl mb-2 {% if has_data %}text-green-500{% else %}text-slate-300{% endif %}"></i>
+      <p class="font-semibold text-slate-700">Dataset</p>
+      <p class="text-sm text-slate-500">{% if has_data %}{{ row_count }} rows · {{ col_count }} cols{% else %}Not uploaded{% endif %}</p>
+    </div>
+    <div class="card text-center">
+      <i class="fas fa-table-columns text-3xl mb-2 {% if column_map %}text-green-500{% else %}text-slate-300{% endif %}"></i>
+      <p class="font-semibold text-slate-700">Column Map</p>
+      <p class="text-sm text-slate-500">{% if column_map %}{{ column_map|length }} fields mapped{% else %}Not configured{% endif %}</p>
+    </div>
+    <div class="card text-center">
+      <i class="fas fa-chart-line text-3xl mb-2 {% if has_data and column_map %}text-green-500{% else %}text-slate-300{% endif %}"></i>
+      <p class="font-semibold text-slate-700">Forecast</p>
+      <p class="text-sm text-slate-500">{% if has_data and column_map %}Ready{% else %}Pending data{% endif %}</p>
+    </div>
+  </div>
+
+  <!-- Upload Form -->
+  <div class="card mb-6">
+    <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+      <i class="fas fa-upload text-blue-500"></i> Upload Inventory Dataset
+    </h3>
+    <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+      <div class="flex flex-col gap-4">
+        <div>
+          <label class="block text-sm text-slate-600 mb-1">Select File (CSV or Excel)</label>
+          <input type="file" name="file" accept=".csv,.xlsx,.xls" required
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div>
+          <label class="block text-sm text-slate-600 mb-1">Upload Mode</label>
+          <select name="mode" class="border border-slate-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="replace">Replace existing data</option>
+            <option value="append">Append to existing data</option>
+          </select>
+        </div>
+        <button type="submit"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-all flex items-center gap-2 w-fit">
+          <i class="fas fa-upload"></i> Upload Dataset
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card">
+    <h3 class="font-semibold text-slate-700 mb-4">Quick Actions</h3>
+    <div class="flex flex-wrap gap-3">
+      <a href="{{ url_for('load_sample') }}"
+         class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
+        <i class="fas fa-flask"></i> Load Sample Data (40 Materials)
+      </a>
+      {% if has_data %}
+      <a href="{{ url_for('column_mapping') }}"
+         class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
+        <i class="fas fa-table-columns"></i> Configure Column Mapping
+      </a>
+      <a href="{{ url_for('dashboard') }}"
+         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
+        <i class="fas fa-chart-pie"></i> Open Dashboard
+      </a>
+      <form action="{{ url_for('clear_data') }}" method="post" onsubmit="return confirm('Clear all data?')">
+        <button type="submit"
+                class="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
+          <i class="fas fa-trash"></i> Clear Data
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

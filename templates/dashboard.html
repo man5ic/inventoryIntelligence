@@ -1,0 +1,721 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard – Inventory IQ
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- Phase 9: Low Movement & Dead Stock Panel                      -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+{% if dead_stock_result and dead_stock_result.has_data %}
+<div class="card mb-6">
+  <!-- Panel Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-warehouse text-red-500 text-lg"></i>
+      <h3 class="font-semibold text-slate-700 text-base">Low Movement &amp; Dead Stock Panel</h3>
+    </div>
+    <!-- Summary Badges -->
+    <div class="flex flex-wrap gap-2">
+      {% if dead_stock_result.dead_count > 0 %}
+      <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+        <i class="fas fa-circle text-red-500" style="font-size:7px"></i>
+        Dead Stock: {{ dead_stock_result.dead_count }}
+      </span>
+      {% endif %}
+      {% if dead_stock_result.low_count > 0 %}
+      <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+        <i class="fas fa-circle text-yellow-500" style="font-size:7px"></i>
+        Low Movement: {{ dead_stock_result.low_count }}
+      </span>
+      {% endif %}
+      {% if dead_stock_result.overstock_count > 0 %}
+      <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+        <i class="fas fa-circle text-blue-500" style="font-size:7px"></i>
+        Overstock Risk: {{ dead_stock_result.overstock_count }}
+      </span>
+      {% endif %}
+      {% if dead_stock_result.total_flagged_value > 0 %}
+      <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+        <i class="fas fa-rupee-sign"></i>
+        Flagged Value: &#8377;{{ '{:,.0f}'.format(dead_stock_result.total_flagged_value) }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="text-xs text-slate-400 mb-4">
+    Auto-detected slow-moving, dead, and overstock-risk materials. Recommendations are generated to reduce holding costs and unnecessary procurement.
+  </p>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left">
+          <th class="pb-2 pr-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Material</th>
+          <th class="pb-2 pr-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Description</th>
+          <th class="pb-2 pr-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+          <th class="pb-2 pr-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Recent Demand<br><span class="font-normal normal-case">(avg/month)</span></th>
+          <th class="pb-2 pr-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Risk Level</th>
+          <th class="pb-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Recommendation</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for item in dead_stock_result.flagged[:40] %}
+        <tr class="hover:bg-slate-50 transition-colors">
+          <!-- Material Code -->
+          <td class="py-2 pr-3 font-mono text-xs text-slate-600 whitespace-nowrap">{{ item.material_code }}</td>
+          <!-- Description -->
+          <td class="py-2 pr-3 text-xs text-slate-600 max-w-xs truncate">{{ item.description[:50] }}</td>
+          <!-- Status Badge -->
+          <td class="py-2 pr-3">
+            {% if item.status == 'DEAD STOCK' %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>Dead Stock
+            </span>
+            {% elif item.status == 'LOW MOVEMENT' %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block"></span>Low Movement
+            </span>
+            {% elif item.status == 'OVERSTOCK RISK' %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span>Overstock Risk
+            </span>
+            {% endif %}
+          </td>
+          <!-- Recent Demand -->
+          <td class="py-2 pr-3 text-right text-xs font-medium
+            {% if item.avg_monthly_demand <= 1 %}text-red-600
+            {% elif item.avg_monthly_demand <= 5 %}text-yellow-600
+            {% else %}text-slate-600{% endif %}
+          ">{{ item.avg_monthly_demand }}</td>
+          <!-- Risk Level -->
+          <td class="py-2 pr-3">
+            {% if item.risk_level == 'CRITICAL' %}
+            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-red-600 text-white">CRITICAL</span>
+            {% elif item.risk_level == 'HIGH' %}
+            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-orange-500 text-white">HIGH</span>
+            {% elif item.risk_level == 'MEDIUM' %}
+            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-yellow-400 text-yellow-900">MEDIUM</span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-200 text-slate-600">LOW</span>
+            {% endif %}
+          </td>
+          <!-- Recommendation -->
+          <td class="py-2 text-xs text-slate-500 italic">{{ item.recommendation }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if dead_stock_result.total_flagged > 40 %}
+    <p class="text-xs text-slate-400 mt-2 text-center">Showing top 40 of {{ dead_stock_result.total_flagged }} flagged materials</p>
+    {% endif %}
+  </div>
+
+  <!-- Color Legend -->
+  <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap gap-4 text-xs text-slate-500">
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Red = Dead Stock</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span> Yellow = Low Movement</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Blue = Overstock Risk</span>
+  </div>
+</div>
+{% elif dead_stock_result %}
+<div class="card mb-6">
+  <div class="flex items-center gap-2 mb-2">
+    <i class="fas fa-warehouse text-green-500"></i>
+    <h3 class="font-semibold text-slate-700">Low Movement &amp; Dead Stock Panel</h3>
+  </div>
+  <p class="text-sm text-green-700 flex items-center gap-2">
+    <i class="fas fa-check-circle"></i> No slow-moving, dead stock, or overstock-risk materials detected in the current dataset.
+  </p>
+</div>
+{% endif %}
+<!-- ══ END Phase 9 Panel ══ -->
+
+
+{% endblock %}
+{% block page_title %}Intelligence Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PHASE 7: Enterprise Filter Bar                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="card mb-5 border-l-4 border-blue-600" id="filter-bar">
+  <div class="flex flex-wrap items-end gap-3">
+
+    <!-- Title -->
+    <div class="flex-shrink-0 mr-2">
+      <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+        <i class="fas fa-filter text-blue-500 mr-1"></i> Analytics Filters
+      </p>
+      {% if filter_ctx.is_filtered %}
+      <span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+        <i class="fas fa-circle text-blue-400" style="font-size:7px;"></i>
+        {{ filter_ctx.active_label }}
+      </span>
+      {% else %}
+      <span class="text-xs text-slate-400">All Plants · All Regions · Full Period</span>
+      {% endif %}
+    </div>
+
+    <!-- Plant filter -->
+    {% if filter_ctx.plants %}
+    <div class="flex flex-col gap-1 min-w-[160px]">
+      <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        <i class="fas fa-industry text-slate-400 mr-1"></i>Plant
+      </label>
+      <select id="filter-plant" class="filter-select border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer">
+        <option value="__all__" {% if filter_ctx.selected_plant == '__all__' %}selected{% endif %}>All Plants</option>
+        {% for p in filter_ctx.plants %}
+        <option value="{{ p }}" {% if filter_ctx.selected_plant == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+
+    <!-- Region filter -->
+    {% if filter_ctx.regions %}
+    <div class="flex flex-col gap-1 min-w-[170px]">
+      <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        <i class="fas fa-map-location-dot text-slate-400 mr-1"></i>Region
+      </label>
+      <select id="filter-region" class="filter-select border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer">
+        <option value="__all__" {% if filter_ctx.selected_region == '__all__' %}selected{% endif %}>All Regions</option>
+        {% for r in filter_ctx.regions %}
+        <option value="{{ r }}" {% if filter_ctx.selected_region == r %}selected{% endif %}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+
+    <!-- Time Period filter -->
+    <div class="flex flex-col gap-1 min-w-[170px]">
+      <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        <i class="fas fa-calendar-days text-slate-400 mr-1"></i>Time Period
+      </label>
+      <select id="filter-period" class="filter-select border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer">
+        <option value="__all__" {% if filter_ctx.selected_period == '__all__' %}selected{% endif %}>Full Period</option>
+        {% if filter_ctx.year_options %}
+        <optgroup label="── By Year ──">
+          {% for y in filter_ctx.year_options %}
+          <option value="{{ y.value }}" {% if filter_ctx.selected_period == y.value %}selected{% endif %}>{{ y.label }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+        {% if filter_ctx.quarter_options %}
+        <optgroup label="── By Quarter ──">
+          {% for q in filter_ctx.quarter_options %}
+          <option value="{{ q.value }}" {% if filter_ctx.selected_period == q.value %}selected{% endif %}>{{ q.label }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+        {% if filter_ctx.month_labels %}
+        <optgroup label="── By Month ──">
+          {% for m in filter_ctx.month_labels %}
+          <option value="{{ m.value }}" {% if filter_ctx.selected_period == m.value %}selected{% endif %}>{{ m.label }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endif %}
+      </select>
+    </div>
+
+    <!-- Apply button -->
+    <button id="apply-filter-btn" onclick="applyFilters()"
+      class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm">
+      <i class="fas fa-magnifying-glass-chart"></i> Apply Filters
+    </button>
+
+    <!-- Reset button -->
+    {% if filter_ctx.is_filtered %}
+    <a href="{{ url_for('dashboard') }}"
+       class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg text-sm font-medium transition">
+      <i class="fas fa-xmark"></i> Reset
+    </a>
+    {% endif %}
+
+    <!-- Phase 8: Executive Report Download -->
+    <div class="ml-auto flex items-center gap-2">
+      <a id="exec-report-btn"
+         href="{{ url_for('download_executive_report', plant=filter_ctx.selected_plant, region=filter_ctx.selected_region, period=filter_ctx.selected_period) }}"
+         class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-sm"
+         title="Download filtered executive report as Excel">
+        <i class="fas fa-file-excel"></i> Generate Executive Report
+      </a>
+    </div>
+
+    <!-- Filtered badge -->
+    {% if filter_ctx.is_filtered %}
+    <div class="ml-auto flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+      <i class="fas fa-circle-check text-green-500 text-sm"></i>
+      <span class="text-xs text-green-700 font-semibold">Filtered view active — all panels updated</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Quick filter chips (plant shortcuts) -->
+  {% if filter_ctx.plants %}
+  <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100">
+    <span class="text-xs text-slate-400 self-center mr-1">Quick:</span>
+    <button onclick="setFilter('plant','__all__')"
+      class="text-xs px-3 py-1 rounded-full border transition
+        {% if filter_ctx.selected_plant == '__all__' %}bg-blue-600 text-white border-blue-600{% else %}bg-white text-slate-600 border-slate-200 hover:border-blue-400{% endif %}">
+      All Plants
+    </button>
+    {% for p in filter_ctx.plants %}
+    <button onclick="setFilter('plant','{{ p }}')"
+      class="text-xs px-3 py-1 rounded-full border transition
+        {% if filter_ctx.selected_plant == p %}bg-blue-600 text-white border-blue-600{% else %}bg-white text-slate-600 border-slate-200 hover:border-blue-400{% endif %}">
+      {{ p }}
+    </button>
+    {% endfor %}
+    {% for r in filter_ctx.regions %}
+    <button onclick="setFilter('region','{{ r }}')"
+      class="text-xs px-3 py-1 rounded-full border transition
+        {% if filter_ctx.selected_region == r %}bg-indigo-600 text-white border-indigo-600{% else %}bg-white text-slate-600 border-slate-200 hover:border-indigo-400{% endif %}">
+      {{ r }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function applyFilters() {
+  const plant  = document.getElementById('filter-plant')  ? document.getElementById('filter-plant').value  : '__all__';
+  const region = document.getElementById('filter-region') ? document.getElementById('filter-region').value : '__all__';
+  const period = document.getElementById('filter-period') ? document.getElementById('filter-period').value : '__all__';
+  const params = new URLSearchParams();
+  if (plant  !== '__all__') params.set('plant',  plant);
+  if (region !== '__all__') params.set('region', region);
+  if (period !== '__all__') params.set('period', period);
+  const btn = document.getElementById('apply-filter-btn');
+  if (btn) { btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying…'; btn.disabled = true; }
+  window.location.href = '{{ url_for("dashboard") }}' + (params.toString() ? '?' + params.toString() : '');
+}
+
+// Phase 8: Update executive report download URL when filters change
+function updateExecReportUrl() {
+  const plant  = document.getElementById('filter-plant')  ? document.getElementById('filter-plant').value  : '__all__';
+  const region = document.getElementById('filter-region') ? document.getElementById('filter-region').value : '__all__';
+  const period = document.getElementById('filter-period') ? document.getElementById('filter-period').value : '__all__';
+  const params = new URLSearchParams();
+  if (plant  !== '__all__') params.set('plant',  plant);
+  if (region !== '__all__') params.set('region', region);
+  if (period !== '__all__') params.set('period', period);
+  const btn = document.getElementById('exec-report-btn');
+  if (btn) {
+    btn.href = '{{ url_for("download_executive_report") }}' + (params.toString() ? '?' + params.toString() : '');
+  }
+}
+document.querySelectorAll('.filter-select').forEach(el => {
+  el.addEventListener('change', updateExecReportUrl);
+});
+function setFilter(key, val) {
+  const plant  = document.getElementById('filter-plant')  ? document.getElementById('filter-plant').value  : '__all__';
+  const region = document.getElementById('filter-region') ? document.getElementById('filter-region').value : '__all__';
+  const period = document.getElementById('filter-period') ? document.getElementById('filter-period').value : '__all__';
+  const params = new URLSearchParams();
+  const vals = { plant, region, period };
+  vals[key] = val;
+  if (vals.plant  !== '__all__') params.set('plant',  vals.plant);
+  if (vals.region !== '__all__') params.set('region', vals.region);
+  if (vals.period !== '__all__') params.set('period', vals.period);
+  window.location.href = '{{ url_for("dashboard") }}' + (params.toString() ? '?' + params.toString() : '');
+}
+// Sync dropdowns with current URL params on load
+document.addEventListener('DOMContentLoaded', function() {
+  const params = new URLSearchParams(window.location.search);
+  ['plant','region','period'].forEach(key => {
+    const el = document.getElementById('filter-' + key);
+    if (el && params.has(key)) { el.value = params.get(key); }
+  });
+});
+</script>
+<!-- ══ END Phase 7 Filter Bar ══ -->
+
+<!-- KPI Row -->
+{% if filter_ctx.is_filtered %}
+<div class="mb-3 flex items-center gap-2 text-sm text-blue-700 bg-blue-50 px-4 py-2 rounded-lg border border-blue-100">
+  <i class="fas fa-filter text-blue-400"></i>
+  <span class="font-semibold">Filtered:</span> {{ filter_ctx.active_label }}
+  <a href="{{ url_for('dashboard') }}" class="ml-auto text-xs text-blue-500 hover:underline">
+    <i class="fas fa-xmark mr-1"></i>Clear filters
+  </a>
+</div>
+{% endif %}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="kpi-card border-blue-500">
+    <p class="text-slate-500 text-xs mb-1">Total Materials</p>
+    <p class="text-2xl font-bold text-slate-800">{{ inv_result.summary.total_items }}</p>
+    <p class="text-xs text-slate-400 mt-1">In dataset</p>
+  </div>
+  <div class="kpi-card border-amber-500">
+    <p class="text-slate-500 text-xs mb-1">Total Inv. Value</p>
+    <p class="text-2xl font-bold text-slate-800">₹{{ '{:,.0f}'.format(inv_result.summary.total_value) }}</p>
+    <p class="text-xs text-slate-400 mt-1">Annual</p>
+  </div>
+  <div class="kpi-card border-green-500">
+    <p class="text-slate-500 text-xs mb-1">PEAK Materials</p>
+    <p class="text-2xl font-bold text-green-600">{{ forecast_summary.peak_count }}</p>
+    <p class="text-xs text-slate-400 mt-1">Demand rising</p>
+  </div>
+  <div class="kpi-card border-red-500">
+    <p class="text-slate-500 text-xs mb-1">Active Alerts</p>
+    <p class="text-2xl font-bold text-red-600">{{ alert_result.total }}</p>
+    <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+      {% if alert_result.critical_count > 0 %}
+      <span class="badge badge-critical">{{ alert_result.critical_count }} Critical</span>
+      {% else %}
+      No critical issues
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PHASE 6: Procurement Command Center                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+
+<!-- Smart Procurement Insights Banner -->
+{% if exec_summary.procurement_insights %}
+<div class="card mb-6 border-l-4 border-indigo-500 bg-gradient-to-r from-indigo-50 to-white">
+  <h3 class="font-semibold text-indigo-800 mb-2 flex items-center gap-2 text-sm">
+    <i class="fas fa-lightbulb text-indigo-500"></i> Smart Procurement Insights
+    <span class="ml-auto text-xs text-indigo-400 bg-indigo-100 px-2 py-0.5 rounded">Phase 6</span>
+  </h3>
+  <div class="flex flex-wrap gap-2">
+    {% for insight in exec_summary.procurement_insights %}
+    <div class="flex items-center gap-2 bg-white border border-indigo-100 rounded-full px-3 py-1 shadow-sm">
+      <i class="fas fa-circle text-indigo-400" style="font-size:6px;"></i>
+      <span class="text-xs text-indigo-800 font-medium">{{ insight }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Phase 6: Side-by-side Procurement Panels -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+  <!-- ── Procurement Priority Ranking ── -->
+  <div class="card">
+    <h3 class="font-semibold text-slate-700 mb-1 flex items-center gap-2">
+      <i class="fas fa-ranking-star text-red-500"></i> Procurement Priority Ranking
+      <span class="ml-auto text-xs text-slate-400 bg-red-50 px-2 py-0.5 rounded text-red-600">Phase 6</span>
+    </h3>
+    <p class="text-xs text-slate-400 mb-3">Top 10 materials ranked by procurement urgency</p>
+
+    <!-- Summary badges -->
+    <div class="flex gap-2 mb-3">
+      <span class="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+        <i class="fas fa-circle-exclamation" style="font-size:10px;"></i>
+        {{ ranking_result.critical_count }} Critical
+      </span>
+      <span class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+        <i class="fas fa-eye" style="font-size:10px;"></i>
+        {{ ranking_result.monitor_count }} Monitor
+      </span>
+      <span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+        <i class="fas fa-circle-check" style="font-size:10px;"></i>
+        {{ ranking_result.stable_count }} Stable
+      </span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table style="font-size:11px;">
+        <thead>
+          <tr>
+            <th style="width:32px;">#</th>
+            <th>Material</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in ranking_result.rankings %}
+          <tr class="{% if item.priority_level == 'Critical' %}bg-red-50{% elif item.priority_level == 'Monitor' %}bg-yellow-50{% else %}bg-blue-50{% endif %} hover:opacity-90 transition">
+            <td class="font-bold text-center
+              {% if item.priority_level == 'Critical' %}text-red-600
+              {% elif item.priority_level == 'Monitor' %}text-yellow-600
+              {% else %}text-blue-500{% endif %}">
+              {{ item.rank }}
+            </td>
+            <td>
+              <span class="font-mono text-slate-500" style="font-size:10px;">{{ item.material_code }}</span><br>
+              <span class="text-slate-700 font-medium" style="line-height:1.2;">{{ item.description[:28] }}{% if item.description|length > 28 %}…{% endif %}</span>
+            </td>
+            <td>
+              <div class="flex flex-col items-start gap-0.5">
+                <span class="font-bold text-xs
+                  {% if item.priority_level == 'Critical' %}text-red-600
+                  {% elif item.priority_level == 'Monitor' %}text-yellow-600
+                  {% else %}text-blue-500{% endif %}">
+                  {{ item.priority_level }}
+                </span>
+                <span class="text-slate-400" style="font-size:10px;">Score: {{ item.priority_score }}</span>
+              </div>
+            </td>
+            <td>
+              {% if item.status == 'Critical Procurement' %}
+              <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">{{ item.status }}</span>
+              {% elif item.status == 'High Attention' %}
+              <span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">{{ item.status }}</span>
+              {% elif item.status == 'Monitor Closely' %}
+              <span style="background:#fef9c3;color:#713f12;font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;">{{ item.status }}</span>
+              {% else %}
+              <span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;">{{ item.status }}</span>
+              {% endif %}
+            </td>
+            <td class="text-slate-600" style="font-size:10px;max-width:140px;">{{ item.recommendation }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-slate-400 py-4">No data available</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Top Risk Materials Panel ── -->
+  <div class="card">
+    <h3 class="font-semibold text-slate-700 mb-1 flex items-center gap-2">
+      <i class="fas fa-shield-halved text-orange-500"></i> Top Risk Materials
+      <span class="ml-auto text-xs text-slate-400 bg-orange-50 px-2 py-0.5 rounded text-orange-600">Phase 6</span>
+    </h3>
+    <p class="text-xs text-slate-400 mb-3">Auto-detected procurement anomalies & supply risks</p>
+
+    <!-- Risk counts -->
+    <div class="flex gap-2 mb-3">
+      <span class="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+        <i class="fas fa-triangle-exclamation" style="font-size:10px;"></i>
+        {{ risk_result.high_risk_count }} High Risk
+      </span>
+      <span class="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+        <i class="fas fa-circle-half-stroke" style="font-size:10px;"></i>
+        {{ risk_result.medium_risk_count }} Medium Risk
+      </span>
+    </div>
+
+    <!-- Risk material cards -->
+    <div class="space-y-2 overflow-y-auto" style="max-height:420px;">
+      {% for risk in risk_result.risks %}
+      <div class="rounded-lg px-3 py-2 border-l-4
+        {% if risk.risk_score >= 60 %}border-red-500 bg-red-50
+        {% elif risk.risk_score >= 35 %}border-orange-400 bg-orange-50
+        {% else %}border-yellow-400 bg-yellow-50{% endif %}">
+        <div class="flex items-center justify-between mb-1">
+          <div>
+            <span class="font-mono text-slate-400" style="font-size:10px;">{{ risk.material_code }}</span>
+            <span class="font-semibold text-slate-800 ml-1" style="font-size:11px;">
+              {{ risk.description[:32] }}{% if risk.description|length > 32 %}…{% endif %}
+            </span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-xs font-bold
+              {% if risk.risk_score >= 60 %}text-red-600
+              {% elif risk.risk_score >= 35 %}text-orange-600
+              {% else %}text-yellow-700{% endif %}">
+              Risk {{ risk.risk_score }}
+            </span>
+            <span style="font-size:9px;padding:1px 5px;border-radius:999px;font-weight:700;
+              {% if risk.abc_class == 'A' %}background:#fecaca;color:#991b1b;
+              {% elif risk.abc_class == 'B' %}background:#fed7aa;color:#9a3412;
+              {% else %}background:#e0e7ff;color:#3730a3;{% endif %}">
+              {{ risk.abc_class }}
+            </span>
+          </div>
+        </div>
+        <!-- Alert messages -->
+        {% for alert_msg in risk.alerts %}
+        <div class="flex items-start gap-1.5 mt-0.5">
+          <i class="fas fa-circle-dot mt-0.5
+            {% if risk.risk_score >= 60 %}text-red-400
+            {% elif risk.risk_score >= 35 %}text-orange-400
+            {% else %}text-yellow-500{% endif %}"
+            style="font-size:8px;"></i>
+          <span class="text-xs
+            {% if risk.risk_score >= 60 %}text-red-800
+            {% elif risk.risk_score >= 35 %}text-orange-800
+            {% else %}text-yellow-800{% endif %}">
+            {{ alert_msg }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="flex flex-col items-center py-8 text-slate-400">
+        <i class="fas fa-shield-check text-3xl text-green-400 mb-2"></i>
+        <p class="text-sm">No significant procurement risks detected</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Executive alert feed -->
+    {% if risk_result.exec_alerts %}
+    <div class="mt-3 pt-3 border-t border-slate-100">
+      <p class="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">Executive Alerts</p>
+      {% for ea in risk_result.exec_alerts %}
+      <div class="flex items-start gap-2 mb-1.5">
+        <i class="fas fa-triangle-exclamation
+          {% if ea.severity == 'high' %}text-red-500{% else %}text-orange-400{% endif %}
+          mt-0.5" style="font-size:11px;"></i>
+        <div>
+          <span class="text-xs font-semibold text-slate-700">{{ ea.material }}</span>
+          <span class="text-xs text-slate-500 ml-1">— {{ ea.message }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+<!-- ══ END Phase 6 Panels ══ -->
+
+<!-- Procurement Risk & Forecast Notifications -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+  <!-- Procurement Risks -->
+  <div class="card">
+    <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+      <i class="fas fa-truck text-amber-500"></i> Procurement Risks
+    </h3>
+    {% set proc_alerts = alert_result.alerts | selectattr('category', 'equalto', 'procurement') | list %}
+    {% if proc_alerts %}
+      {% for a in proc_alerts %}
+      <div class="bg-amber-50 rounded-lg px-3 py-2 mb-2 border-l-4 border-amber-400">
+        <p class="text-xs font-semibold text-amber-800">{{ a.title }}</p>
+        <p class="text-xs text-amber-700 mt-0.5">{{ a.message[:100] }}{% if a.message|length > 100 %}…{% endif %}</p>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-sm text-slate-400 py-4 text-center">No procurement risks detected.</p>
+    {% endif %}
+    <div class="mt-2 bg-slate-50 rounded-lg px-3 py-2">
+      <p class="text-xs text-slate-600">
+        <span class="font-medium">Next Quarter Est.:</span>
+        ₹{{ '{:,.0f}'.format(forecast_summary.total_next_quarter_cost) }}
+        {% if exec_summary.kpis.cost_change_pct > 0 %}
+        <span class="text-red-600 font-medium">(+{{ exec_summary.kpis.cost_change_pct }}%)</span>
+        {% elif exec_summary.kpis.cost_change_pct < 0 %}
+        <span class="text-green-600 font-medium">({{ exec_summary.kpis.cost_change_pct }}%)</span>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Forecast Notifications -->
+  <div class="card">
+    <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+      <i class="fas fa-chart-line text-green-500"></i> Forecast Notifications
+    </h3>
+    {% set demand_alerts = alert_result.alerts | selectattr('category', 'equalto', 'demand') | list %}
+    {% if demand_alerts %}
+      {% for a in demand_alerts %}
+      <div class="bg-green-50 rounded-lg px-3 py-2 mb-2 border-l-4 {% if a.priority == 'CRITICAL' %}border-red-400{% else %}border-green-400{% endif %}">
+        <p class="text-xs font-semibold text-green-900">{{ a.title }}</p>
+        <p class="text-xs text-green-800 mt-0.5">{{ a.message[:100] }}{% if a.message|length > 100 %}…{% endif %}</p>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="text-sm text-slate-400 py-2 text-center">No demand alerts.</p>
+    {% endif %}
+    <div class="mt-2 grid grid-cols-3 gap-2">
+      <div class="bg-green-50 rounded px-2 py-1 text-center">
+        <p class="text-xs font-bold text-green-700">{{ forecast_summary.peak_count }}</p>
+        <p class="text-xs text-slate-500">Peak</p>
+      </div>
+      <div class="bg-blue-50 rounded px-2 py-1 text-center">
+        <p class="text-xs font-bold text-blue-700">{{ forecast_summary.normal_count }}</p>
+        <p class="text-xs text-slate-500">Normal</p>
+      </div>
+      <div class="bg-red-50 rounded px-2 py-1 text-center">
+        <p class="text-xs font-bold text-red-700">{{ forecast_summary.low_count }}</p>
+        <p class="text-xs text-slate-500">Declining</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Inventory Insights (Phase 2) -->
+<div class="card mb-6">
+  <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+    <i class="fas fa-brain text-purple-500"></i> Inventory Intelligence Insights
+  </h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+    {% for insight in inv_result.insights %}
+    <div class="flex items-start gap-2 bg-blue-50 rounded-lg px-3 py-2">
+      <i class="fas fa-circle-dot text-blue-400 mt-0.5 text-xs"></i>
+      <span class="text-sm text-slate-700">{{ insight }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  {% if charts.status_donut %}
+  <div class="card col-span-1 flex flex-col items-center">
+    <h4 class="text-sm font-semibold text-slate-600 mb-3">Forecast Status</h4>
+    <img src="data:image/png;base64,{{ charts.status_donut }}" class="max-w-full" alt="Status Chart"/>
+  </div>
+  {% endif %}
+  {% if charts.demand_overview %}
+  <div class="card col-span-2">
+    <h4 class="text-sm font-semibold text-slate-600 mb-3">Top Materials – Next Quarter Demand</h4>
+    <img src="data:image/png;base64,{{ charts.demand_overview }}" class="w-full" alt="Demand Overview"/>
+  </div>
+  {% endif %}
+</div>
+
+{% if charts.procurement_trend %}
+<div class="card mb-6">
+  <h4 class="text-sm font-semibold text-slate-600 mb-3">Monthly Procurement Cost Forecast</h4>
+  <img src="data:image/png;base64,{{ charts.procurement_trend }}" class="w-full" alt="Procurement Trend"/>
+</div>
+{% endif %}
+
+<!-- Inventory Table -->
+<div class="card mb-6">
+  <div class="flex items-center justify-between mb-3">
+    <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+      <i class="fas fa-table text-blue-500"></i> Inventory Intelligence Table
+    </h3>
+    <a href="{{ url_for('download_report') }}"
+       class="bg-slate-500 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1"
+       title="Download full inventory Excel report">
+      <i class="fas fa-download"></i> Full Export
+    </a>
+  </div>
+  <div class="overflow-x-auto">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th><th>Description</th><th>Qty</th><th>Unit Price</th>
+          <th>Annual Value</th><th>EOQ</th><th>Safety Stock</th>
+          <th>Reorder Pt.</th><th>ABC</th><th>Recommendation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table_data %}
+        <tr>
+          <td class="font-mono text-xs">{{ row.get('material_code','') }}</td>
+          <td>{{ row.get('description','') }}</td>
+          <td class="text-right">{{ '{:,.0f}'.format(row.get('quantity',0)) }}</td>
+          <td class="text-right">₹{{ '{:,.2f}'.format(row.get('unit_price',0)) }}</td>
+          <td class="text-right font-medium">₹{{ '{:,.0f}'.format(row.get('annual_value',0)) }}</td>
+          <td class="text-right">{{ '{:,.0f}'.format(row.get('eoq',0)) }}</td>
+          <td class="text-right">{{ '{:,.0f}'.format(row.get('safety_stock',0)) }}</td>
+          <td class="text-right">{{ '{:,.0f}'.format(row.get('reorder_point',0)) }}</td>
+          <td>
+            <span class="badge badge-{% if row.get('abc_class')=='A' %}critical{% elif row.get('abc_class')=='B' %}medium{% else %}info{% endif %}">
+              {{ row.get('abc_class','') }}
+            </span>
+          </td>
+          <td class="text-xs text-slate-500">{{ row.get('recommendation','') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

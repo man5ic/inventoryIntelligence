@@ -1,0 +1,475 @@
+{% extends 'base.html' %}
+{% block title %}Alerts & Risks – Inventory IQ{% endblock %}
+{% block page_title %}Alerts & Risk Intelligence{% endblock %}
+
+{% block content %}
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PHASE 11: Executive Automation Layer Banner                   -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+{% if automation_summary %}
+<div class="mb-5 rounded-xl border px-5 py-4
+  {% if automation_summary.headline_class == 'headline-warning' %}bg-red-50 border-red-200
+  {% elif automation_summary.headline_class == 'headline-action' %}bg-amber-50 border-amber-200
+  {% else %}bg-emerald-50 border-emerald-200{% endif %}">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="flex items-start gap-3">
+      <span class="text-2xl mt-0.5">
+        {% if automation_summary.headline_class == 'headline-warning' %}🚨
+        {% elif automation_summary.headline_class == 'headline-action' %}📋
+        {% else %}✅{% endif %}
+      </span>
+      <div>
+        <p class="font-bold text-sm
+          {% if automation_summary.headline_class == 'headline-warning' %}text-red-800
+          {% elif automation_summary.headline_class == 'headline-action' %}text-amber-800
+          {% else %}text-emerald-800{% endif %}">
+          {{ automation_summary.headline }}
+        </p>
+        <p class="text-xs text-slate-500 mt-0.5">Executive Automation Layer · {{ automation_summary.generated_at }}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      {% if notification_urgency == 'CRITICAL' %}
+      <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white animate-pulse">
+        <i class="fas fa-circle-exclamation"></i> CRITICAL
+      </span>
+      {% elif notification_urgency == 'MEDIUM' %}
+      <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-white">
+        <i class="fas fa-triangle-exclamation"></i> MEDIUM
+      </span>
+      {% else %}
+      <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+        <i class="fas fa-check-circle"></i> LOW RISK
+      </span>
+      {% endif %}
+      <button onclick="triggerAlertCheck()"
+        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+        <i class="fas fa-rotate text-blue-500"></i> Run Check
+      </button>
+    </div>
+  </div>
+
+  <!-- Warnings row -->
+  {% if automation_summary.warnings %}
+  <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+    {% for w in automation_summary.warnings %}
+    <div class="flex items-start gap-2 bg-white rounded-lg px-3 py-2 border border-red-100 shadow-sm">
+      <i class="fas fa-triangle-exclamation text-red-500 mt-0.5 text-xs flex-shrink-0"></i>
+      <span class="text-xs text-red-800">{{ w }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Positives row -->
+  {% if automation_summary.positives %}
+  <div class="mt-2 flex flex-wrap gap-2">
+    {% for p in automation_summary.positives %}
+    <div class="flex items-center gap-1.5 bg-white rounded-full px-3 py-1 border border-emerald-100 text-xs text-emerald-700">
+      <i class="fas fa-check text-emerald-500 text-xs"></i> {{ p }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Actions row -->
+  {% if automation_summary.actions %}
+  <div class="mt-2 flex flex-wrap gap-2">
+    {% for a in automation_summary.actions %}
+    <div class="flex items-center gap-1.5 bg-amber-100 rounded-full px-3 py-1 text-xs text-amber-800 font-medium">
+      <i class="fas fa-arrow-right text-amber-600 text-xs"></i> {{ a }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+<!-- ══ END Phase 11 Banner ══ -->
+
+
+<!-- Alert Summary KPIs -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="kpi-card border-red-500">
+    <p class="text-slate-500 text-xs mb-1">Critical Alerts</p>
+    <p class="text-3xl font-bold text-red-600">{{ alert_result.critical_count }}</p>
+    <p class="text-xs text-slate-400 mt-1">Immediate action required</p>
+  </div>
+  <div class="kpi-card border-amber-500">
+    <p class="text-slate-500 text-xs mb-1">Medium Alerts</p>
+    <p class="text-3xl font-bold text-amber-600">{{ alert_result.medium_count }}</p>
+    <p class="text-xs text-slate-400 mt-1">Plan within 2 weeks</p>
+  </div>
+  <div class="kpi-card border-blue-500">
+    <p class="text-slate-500 text-xs mb-1">Low Alerts</p>
+    <p class="text-3xl font-bold text-blue-600">{{ alert_result.low_count }}</p>
+    <p class="text-xs text-slate-400 mt-1">Monitor</p>
+  </div>
+  <div class="kpi-card border-slate-300">
+    <p class="text-slate-500 text-xs mb-1">Total Active</p>
+    <p class="text-3xl font-bold text-slate-700">{{ alert_result.total }}</p>
+    <p class="text-xs text-slate-400 mt-1">As of {{ alert_result.generated_at }}</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PHASE 11: Enhanced Active Alerts + Executive Summary          -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+  <!-- Active Alerts (Phase 11 enriched — full list) -->
+  <div class="lg:col-span-2">
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+          <i class="fas fa-bell text-red-500"></i> Active Alerts
+          {% if alert_result.has_critical %}
+          <span class="badge badge-critical ml-1 animate-pulse">{{ alert_result.critical_count }} Critical</span>
+          {% elif alert_result.total > 0 %}
+          <span class="badge badge-medium ml-1">{{ alert_result.total }}</span>
+          {% endif %}
+        </h3>
+        <div class="flex items-center gap-2">
+          {% if email_configured %}
+          <form method="post" action="{{ url_for('send_alert_email_route') }}">
+            <button type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1">
+              <i class="fas fa-envelope"></i> Send Alert Email
+            </button>
+          </form>
+          {% else %}
+          <span class="text-xs text-slate-400 flex items-center gap-1">
+            <i class="fas fa-envelope-open"></i> Email not configured
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if alert_result.alerts %}
+        {% for alert in alert_result.alerts %}
+        <div class="mb-3 rounded-lg px-4 py-3 border-l-4
+          {% if alert.priority == 'CRITICAL' %}bg-red-50 border-red-500
+          {% elif alert.priority == 'MEDIUM' %}bg-amber-50 border-amber-400
+          {% else %}bg-blue-50 border-blue-400{% endif %}">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <!-- Phase 11: icon from enrich_alerts_for_dashboard() -->
+                <i class="{{ alert.icon if alert.icon else 'fas fa-bell' }} text-xs
+                  {% if alert.priority == 'CRITICAL' %}text-red-600
+                  {% elif alert.priority == 'MEDIUM' %}text-amber-600
+                  {% else %}text-blue-600{% endif %}"></i>
+                <!-- Phase 11: badge_class from enrich_alerts_for_dashboard() -->
+                <span class="badge {{ alert.badge_class if alert.badge_class else 'badge-info' }} text-xs">
+                  {{ alert.priority }}
+                </span>
+                <span class="text-xs text-slate-500">{{ alert.category | replace('_',' ') | title }}</span>
+                <span class="text-xs text-slate-400 ml-auto">{{ alert.timestamp }}</span>
+              </div>
+              <p class="font-semibold text-slate-800 text-sm mb-1">{{ alert.title }}</p>
+              <p class="text-slate-600 text-xs leading-relaxed">{{ alert.message }}</p>
+              {% if alert.materials %}
+              <p class="text-xs text-slate-400 mt-1">
+                <span class="font-medium">Materials:</span>
+                {{ alert.materials | join(', ') }}
+              </p>
+              {% endif %}
+              <!-- Phase 11: recommendation from enrich_alerts_for_dashboard() -->
+              {% if alert.recommendation %}
+              <p class="text-xs text-indigo-600 mt-2 italic flex items-start gap-1">
+                <i class="fas fa-arrow-right text-xs mt-0.5 flex-shrink-0"></i>
+                {{ alert.recommendation }}
+              </p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="flex flex-col items-center py-10 text-slate-400">
+          <i class="fas fa-shield-check text-4xl text-green-400 mb-3"></i>
+          <p class="font-medium text-slate-600">No active alerts</p>
+          <p class="text-sm">Inventory position looks healthy.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right column: Executive Summary + Automation hints -->
+  <div class="lg:col-span-1 flex flex-col gap-4">
+
+    <!-- Phase 11: Automation Executive Headline -->
+    <div class="card
+      {% if automation_summary and automation_summary.headline_class == 'headline-warning' %}bg-red-50 border-red-200
+      {% elif automation_summary and automation_summary.headline_class == 'headline-action' %}bg-amber-50 border-amber-200
+      {% else %}bg-blue-50 border-blue-200{% endif %}">
+      <h3 class="font-semibold mb-2 flex items-center gap-2 text-sm
+        {% if automation_summary and automation_summary.headline_class == 'headline-warning' %}text-red-800
+        {% elif automation_summary and automation_summary.headline_class == 'headline-action' %}text-amber-800
+        {% else %}text-blue-800{% endif %}">
+        <i class="fas fa-briefcase
+          {% if automation_summary and automation_summary.headline_class == 'headline-warning' %}text-red-500
+          {% elif automation_summary and automation_summary.headline_class == 'headline-action' %}text-amber-500
+          {% else %}text-blue-500{% endif %}"></i>
+        Executive Summary
+        <span class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Phase 11</span>
+      </h3>
+      <p class="text-sm font-medium leading-snug
+        {% if automation_summary and automation_summary.headline_class == 'headline-warning' %}text-red-900
+        {% elif automation_summary and automation_summary.headline_class == 'headline-action' %}text-amber-900
+        {% else %}text-blue-900{% endif %}">
+        {{ automation_summary.headline if automation_summary else exec_summary.headline }}
+      </p>
+      <p class="text-xs text-slate-500 mt-2">{{ exec_summary.report_period }}</p>
+    </div>
+
+    <!-- Risk Flags -->
+    {% if exec_summary.risk_flags %}
+    <div class="card border-red-100">
+      <h3 class="font-semibold text-red-700 mb-3 text-sm flex items-center gap-2">
+        <i class="fas fa-triangle-exclamation text-red-500"></i> Risk Flags
+      </h3>
+      {% for flag in exec_summary.risk_flags %}
+      <div class="bg-red-50 rounded-lg px-3 py-2 mb-2 text-xs text-red-800 leading-relaxed">
+        ⚠ {{ flag }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Phase 11: Automation Actions -->
+    {% if automation_summary and automation_summary.actions %}
+    <div class="card border-amber-100">
+      <h3 class="font-semibold text-amber-700 mb-3 text-sm flex items-center gap-2">
+        <i class="fas fa-bolt text-amber-500"></i> Required Actions
+      </h3>
+      {% for action in automation_summary.actions %}
+      <div class="bg-amber-50 rounded-lg px-3 py-2 mb-2 text-xs text-amber-800 leading-relaxed flex items-start gap-2">
+        <i class="fas fa-arrow-right text-amber-500 mt-0.5 flex-shrink-0 text-xs"></i>
+        {{ action }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    <div class="card border-green-100">
+      <h3 class="font-semibold text-green-700 mb-3 text-sm flex items-center gap-2">
+        <i class="fas fa-lightbulb text-green-500"></i> Recommended Actions
+      </h3>
+      {% for rec in exec_summary.recommendations %}
+      <div class="bg-green-50 rounded-lg px-3 py-2 mb-2 text-xs text-green-800 leading-relaxed">
+        ✓ {{ rec }}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Email config hint -->
+    {% if not email_configured %}
+    <div class="card bg-amber-50 border-amber-200">
+      <h3 class="font-semibold text-amber-800 mb-2 text-sm flex items-center gap-2">
+        <i class="fas fa-envelope text-amber-500"></i> Enable Email Alerts
+      </h3>
+      <p class="text-xs text-amber-700 leading-relaxed mb-2">
+        Set these environment variables to enable automated email alerts:
+      </p>
+      <code class="text-xs bg-amber-100 rounded px-2 py-1 block leading-6 text-amber-900">
+        MAIL_USERNAME<br/>
+        MAIL_PASSWORD<br/>
+        ALERT_RECIPIENT<br/>
+        MAIL_DEFAULT_SENDER
+      </code>
+    </div>
+    {% endif %}
+  </div>
+</div>
+<!-- ══ END Phase 11 Enhanced Active Alerts + Executive Summary ══ -->
+
+
+<!-- Business Intelligence Summary Bullets -->
+<div class="card mb-6">
+  <h3 class="font-semibold text-slate-700 mb-3 flex items-center gap-2">
+    <i class="fas fa-file-lines text-slate-500"></i> Business Intelligence Summary
+  </h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+    {% set bullets = automation_summary.bullets if automation_summary else exec_summary.bullets %}
+    {% for bullet in bullets %}
+    <div class="flex items-start gap-2 bg-slate-50 rounded-lg px-3 py-2">
+      <i class="fas fa-circle-dot text-blue-400 mt-0.5 text-xs"></i>
+      <span class="text-sm text-slate-700">{{ bullet }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- PHASE 11: Automation Status Panel                             -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="card mb-6">
+  <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+    <i class="fas fa-robot text-indigo-500"></i> Executive Automation Status
+    <span class="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Phase 11</span>
+    {% if automation_status.scheduler_running %}
+    <span class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+      <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse"></span> Active
+    </span>
+    {% else %}
+    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">Idle</span>
+    {% endif %}
+  </h3>
+
+  <!-- Status overview strip -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+    <div class="bg-slate-50 rounded-xl px-4 py-3 text-center">
+      <p class="text-xl font-bold text-slate-700">{{ automation_status.total_alerts }}</p>
+      <p class="text-xs text-slate-500 mt-0.5">Active Alerts</p>
+    </div>
+    <div class="bg-red-50 rounded-xl px-4 py-3 text-center">
+      <p class="text-xl font-bold text-red-600">{{ automation_status.critical_alerts }}</p>
+      <p class="text-xs text-slate-500 mt-0.5">Critical</p>
+    </div>
+    <div class="{% if automation_status.scheduler_running %}bg-green-50{% else %}bg-slate-50{% endif %} rounded-xl px-4 py-3 text-center">
+      <p class="text-xl font-bold {% if automation_status.scheduler_running %}text-green-600{% else %}text-slate-400{% endif %}">
+        {% if automation_status.scheduler_running %}ON{% else %}OFF{% endif %}
+      </p>
+      <p class="text-xs text-slate-500 mt-0.5">Scheduler</p>
+    </div>
+    <div class="{% if automation_status.email_configured %}bg-blue-50{% else %}bg-slate-50{% endif %} rounded-xl px-4 py-3 text-center">
+      <p class="text-xl font-bold {% if automation_status.email_configured %}text-blue-600{% else %}text-slate-400{% endif %}">
+        {% if automation_status.email_configured %}ON{% else %}OFF{% endif %}
+      </p>
+      <p class="text-xs text-slate-500 mt-0.5">Email Alerts</p>
+    </div>
+  </div>
+
+  <!-- Scheduled Tasks -->
+  <div class="mb-4">
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Scheduled Tasks</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {% if automation_status.tasks %}
+        {% for task in automation_status.tasks %}
+        <div class="rounded-xl border px-4 py-3
+          {% if task.status == 'active' %}bg-indigo-50 border-indigo-100{% else %}bg-slate-50 border-slate-200{% endif %}">
+          <div class="flex items-center gap-2 mb-1">
+            <i class="{{ task.icon }}
+              {% if task.status == 'active' %}text-indigo-600{% else %}text-slate-400{% endif %} text-sm"></i>
+            <span class="text-xs font-semibold
+              {% if task.status == 'active' %}text-indigo-800{% else %}text-slate-600{% endif %}">
+              {{ task.name }}
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 mb-1">{{ task.description }}</p>
+          <p class="text-xs font-medium {% if task.status == 'active' %}text-indigo-600{% else %}text-slate-400{% endif %}">
+            <i class="fas fa-clock mr-1"></i>{{ task.frequency }}
+          </p>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Next: {{ task.next_run }}
+          </p>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="col-span-3 text-center py-4 text-slate-400 text-sm">
+          <i class="fas fa-circle-info mr-1"></i>
+          Start the app with <code class="bg-slate-100 px-1 rounded text-slate-600">python app.py</code> to activate the automation scheduler.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Email Configuration Status -->
+  <div class="rounded-xl border px-4 py-3 mb-4
+    {% if automation_status.email_configured %}bg-blue-50 border-blue-100{% else %}bg-slate-50 border-slate-200{% endif %}">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-envelope {% if automation_status.email_configured %}text-blue-600{% else %}text-slate-400{% endif %}"></i>
+      <span class="text-xs font-semibold {% if automation_status.email_configured %}text-blue-800{% else %}text-slate-600{% endif %}">
+        Email Alert System
+      </span>
+      {% if automation_status.email_configured %}
+      <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white">Configured</span>
+      {% else %}
+      <span class="ml-auto px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-600">Not Configured</span>
+      {% endif %}
+    </div>
+    {% if not automation_status.email_configured %}
+    <p class="text-xs text-slate-500 mt-1">
+      Set <code class="bg-slate-100 px-1 rounded">MAIL_USERNAME</code>, <code class="bg-slate-100 px-1 rounded">MAIL_PASSWORD</code>,
+      and <code class="bg-slate-100 px-1 rounded">ALERT_RECIPIENT</code> environment variables to enable automated email alerts.
+    </p>
+    {% else %}
+    <p class="text-xs text-blue-700 mt-1">Critical alerts will automatically trigger email notifications to the configured recipient.</p>
+    {% endif %}
+  </div>
+
+  <!-- Manual Trigger -->
+  <div class="flex flex-wrap items-center gap-3">
+    <button onclick="triggerAlertCheck()"
+      class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm">
+      <i class="fas fa-play"></i> Run Alert Check Now
+    </button>
+    {% if email_configured %}
+    <form action="{{ url_for('send_alert_email_route') }}" method="POST" class="inline">
+      <button type="submit"
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+        <i class="fas fa-envelope"></i> Send Alert Email
+      </button>
+    </form>
+    {% endif %}
+    <span id="alert-check-result" class="text-xs text-slate-500 hidden"></span>
+  </div>
+
+  <!-- Recent Automation Log -->
+  {% if automation_status.recent_log or automation_log %}
+  <div class="mt-4 border-t border-slate-100 pt-3">
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Recent Automation Activity</p>
+    <div class="space-y-1 max-h-36 overflow-y-auto">
+      {% set log_entries = automation_log if automation_log else automation_status.recent_log %}
+      {% for entry in log_entries[:8] %}
+      <div class="flex items-start gap-2 text-xs">
+        <span class="text-slate-400 flex-shrink-0 font-mono">{{ entry.timestamp }}</span>
+        <span class="w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0
+          {% if entry.status == 'success' %}bg-green-400
+          {% elif entry.status == 'error' %}bg-red-400
+          {% elif entry.status == 'skipped' %}bg-amber-400
+          {% else %}bg-blue-400{% endif %}"></span>
+        <span class="text-slate-600">{{ entry.message }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+<!-- ══ END Phase 11 Automation Status ══ -->
+
+
+<!-- ══ Phase 11: JavaScript for manual alert trigger ══ -->
+<script>
+function triggerAlertCheck() {
+  const btn = event.currentTarget;
+  const resultEl = document.getElementById('alert-check-result');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+  if (resultEl) { resultEl.classList.add('hidden'); }
+
+  fetch('/api/trigger-alert-check', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-play"></i> Run Alert Check Now';
+      if (resultEl) {
+        resultEl.textContent = data.email_sent
+          ? `✓ Check complete. Email sent. Urgency: ${data.urgency}`
+          : `✓ Check complete. Urgency: ${data.urgency}. Alerts: ${data.total_alerts}`;
+        resultEl.classList.remove('hidden');
+        setTimeout(() => resultEl.classList.add('hidden'), 6000);
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-play"></i> Run Alert Check Now';
+    });
+}
+</script>
+<!-- ══ END Phase 11 JS ══ -->
+
+{% endblock %}
